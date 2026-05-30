@@ -531,7 +531,22 @@ function EditPanel({ puzzle, onSave, onClose }) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => updateGroup(gi, 'image', ev.target.result);
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 600;
+        let { width: w, height: h } = img;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        updateGroup(gi, 'image', canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = ev.target.result;
+    };
     reader.readAsDataURL(file);
   }
 
@@ -802,7 +817,11 @@ function App() {
   }
 
   function handleSaveEdit(newPuzzle) {
-    try { localStorage.setItem('connections_puzzle', JSON.stringify(newPuzzle)); } catch {}
+    try {
+      localStorage.setItem('connections_puzzle', JSON.stringify(newPuzzle));
+    } catch (err) {
+      showToast('⚠️ Images too large to save — they\'ll reset on refresh', 3500);
+    }
     startNewGame(newPuzzle);
   }
 
